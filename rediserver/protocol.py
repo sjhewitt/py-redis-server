@@ -7,21 +7,24 @@ See http://redis.io/topics/protocol for more info.
 import redis.connection
 
 
-class InputParser(redis.connection.PythonParser):
-    """Subclasses the client PythonParser to spoof the internals of reading off a socket."""
-    def __init__(self, lines, encoding=None):
-        super(InputParser, self).__init__()
-        self.data = lines
+class FakeBuffer(object):
+    def __init__(self, lines):
+        self.lines = lines
         self.pos = 0
-        self.encoding = encoding
 
-    def read(self, _length=None):
+    def readline(self, length=None):
         """Override; read from memory instead of a socket."""
         self.pos += 1
-        data = self.data[self.pos - 1]
-        if self.encoding:
-            data.decode(self.encoding)
-        return data
+        return self.lines[self.pos - 1]
+
+    read = readline
+
+
+class InputParser(redis.connection.PythonParser):
+    """Subclasses the client PythonParser to spoof the internals of reading off a socket."""
+    def __init__(self, lines):
+        super(InputParser, self).__init__(65536)
+        self._buffer = FakeBuffer(lines)
 
 
 class Response(object):
